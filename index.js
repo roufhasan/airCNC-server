@@ -27,6 +27,27 @@ const client = new MongoClient(uri, {
   },
 });
 
+// validate jwt
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "Unauthorized Access" });
+  }
+  // token verify
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ error: true, message: "Unauthorized Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     const usersCollection = client.db("aircncDb").collection("users");
@@ -37,10 +58,8 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const email = req.body;
       const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "2h",
+        expiresIn: "1d",
       });
-      console.log(token);
-      console.log(email);
       res.send({ token });
     });
 
@@ -87,8 +106,14 @@ async function run() {
       res.send(result);
     });
 
-    // Get rooms by using email
-    app.get("/rooms/:email", async (req, res) => {
+    // Get all rooms for host
+    app.get("/rooms/:email", verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "Forbidden Access" });
+      }
       const email = req.params.email;
       const query = { "host.email": email };
       const result = await roomsCollection.find(query).toArray();
