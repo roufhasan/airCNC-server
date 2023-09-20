@@ -108,13 +108,13 @@ async function run() {
 
     // Get all rooms for host
     app.get("/rooms/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
       const decodedEmail = req.decoded.email;
       if (email !== decodedEmail) {
         return res
           .status(403)
           .send({ error: true, message: "Forbidden Access" });
       }
-      const email = req.params.email;
       const query = { "host.email": email };
       const result = await roomsCollection.find(query).toArray();
       res.send(result);
