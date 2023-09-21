@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const nodemailer = require("nodemailer");
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
@@ -143,6 +144,24 @@ async function run() {
       res.send(result);
     });
 
+    // update a room in database
+    app.put("/rooms/:id", verifyJWT, async (req, res) => {
+      const room = req.body;
+      console.log(room);
+
+      const filter = { _id: new ObjectId(req.params.id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: room,
+      };
+      const result = await roomsCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
     // Update room booking status
     app.patch("/rooms/status/:id", async (req, res) => {
       const id = req.params.id;
@@ -185,6 +204,9 @@ async function run() {
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
       const result = await bookingsCollection.insertOne(booking);
+      // send confirmation email to guest email account
+
+      // send confirmation email to host email account
       res.send(result);
     });
 
